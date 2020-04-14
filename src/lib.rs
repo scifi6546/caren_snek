@@ -9,6 +9,8 @@ mod vector;
 use vector::*;
 mod entity;
 use entity::*;
+mod controller;
+use controller::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 static TILE_SIZE: u32 = 20;
@@ -21,7 +23,7 @@ pub struct State {
 }
 #[wasm_bindgen]
 impl State {
-    pub fn process(&mut self, input: Vector2) {
+    pub fn process(&mut self, input: Controller) {
         let old_entities = &self.entities.clone();
         let mut new_entities = vec![];
         for entity in self.entities.iter_mut() {
@@ -36,6 +38,7 @@ impl State {
         }
         return draws;
     }
+    
     pub fn game_loop_js(&mut self, input: JsValue) -> JsValue {
         serde_wasm_bindgen::to_value(
             &self.game_loop(serde_wasm_bindgen::from_value(input).ok().unwrap()),
@@ -43,7 +46,7 @@ impl State {
         .ok()
         .unwrap()
     }
-    pub fn game_loop(&mut self, input: Vector2) -> Vec<u32> {
+    pub fn game_loop(&mut self, input: Controller) -> Vec<u32> {
         self.process(input);
         self.draw()
     }
@@ -58,7 +61,7 @@ pub struct MainOutput {
     pub draw_calls: Vec<u32>,
 }
 
-fn new_player(position: Vector2) -> Entity {
+fn new_cursor(position: Vector2) -> Entity {
     Entity::new(
         position,
         10,
@@ -68,7 +71,7 @@ fn new_player(position: Vector2) -> Entity {
         vec![
             entity::InputComponent::new(),
             entity::GridComponent::new(),
-            entity::EnemyDamageComponent::new(),
+            entity::SpawnFoodComponent::new(),
         ],
     )
 }
@@ -86,19 +89,7 @@ fn new_enemy(position: Vector2) -> Entity {
         ],
     )
 }
-fn new_food(position: Vector2) -> Entity {
-    Entity::new(
-        position,
-        10,
-        10,
-        0xffef00,
-        EntityTeam::Food,
-        vec![
-            entity::GravityComponent::new(),
-            entity::GridComponent::new(),
-        ],
-    )
-}
+
 fn new_prize(position: Vector2) -> Entity {
     Entity::new(
         position,
@@ -123,10 +114,8 @@ pub fn init_state() -> State {
     }
     State {
         entities: vec![
-            new_player(Vector2::new(1, 1)),
-            new_food(Vector2::new(2, 3)),
-            new_snake_entity(Vector2::new(2, 5)),
-            new_prize(Vector2::new(7, 7)),
+            new_cursor(Vector2::new(2, 2)),
+            new_snake_entity(Vector2::new(16, 29)),
         ],
         grid: Grid::new(32, 32, map),
     }
@@ -164,12 +153,6 @@ mod tests {
     #[test]
     fn run_frame() {
         let mut s = init_state();
-        s.game_loop(Vector2::new(0, 0));
-    }
-
-    #[test]
-    fn run_frame_input() {
-        let mut s = init_state();
-        s.game_loop(Vector2::new(1, 0));
+        s.game_loop(Controller::new(Vector2::new(0, 0),&vec![]));
     }
 }

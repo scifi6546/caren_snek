@@ -1,4 +1,5 @@
 use crate::vector::*;
+use crate::controller::*;
 static TILE_SIZE: u32 = 20;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -64,7 +65,7 @@ impl Entity {
     }
     pub fn process(
         &mut self,
-        input: &Vector2,
+        input: &Controller,
         grid: &crate::grid::Grid,
         entities: &Vec<Entity>,
     ) -> Vec<Entity> {
@@ -81,7 +82,7 @@ impl Entity {
 pub trait Component: std::fmt::Debug {
     fn process(
         &mut self,
-        user_input: &Vector2,
+        user_input: &Controller,
         state: &mut EntityState,
         world: &crate::grid::Grid,
         entities: &Vec<Entity>,
@@ -103,12 +104,12 @@ impl InputComponent {
 impl Component for InputComponent {
     fn process(
         &mut self,
-        user_input: &Vector2,
+        user_input: &Controller,
         state: &mut EntityState,
         _world: &crate::grid::Grid,
         _entities: &Vec<Entity>,
     ) -> Vec<Entity> {
-        state.delta_position = user_input.clone();
+        state.delta_position = user_input.get_main_axis().clone();
         vec![]
     }
     fn box_clone(&self) -> Box<dyn Component> {
@@ -121,7 +122,7 @@ pub struct GridComponent {}
 impl Component for GridComponent {
     fn process(
         &mut self,
-        _user_input: &Vector2,
+        _user_input: &Controller,
         state: &mut EntityState,
         world: &crate::grid::Grid,
         _entities: &Vec<Entity>,
@@ -151,7 +152,7 @@ pub struct EnemyDamageComponent {}
 impl Component for EnemyDamageComponent {
     fn process(
         &mut self,
-        _user_input: &Vector2,
+        _user_input: &Controller,
         state: &mut EntityState,
         _world: &crate::grid::Grid,
         entities: &Vec<Entity>,
@@ -187,7 +188,7 @@ pub struct GravityComponent {
 impl Component for GravityComponent {
     fn process(
         &mut self,
-        _user_input: &Vector2,
+        _user_input: &Controller,
         state: &mut EntityState,
         _world: &crate::grid::Grid,
         entities: &Vec<Entity>,
@@ -219,7 +220,7 @@ pub struct SnakeBodyComponent {
 impl Component for SnakeBodyComponent {
     fn process(
         &mut self,
-        _user_input: &Vector2,
+        _user_input: &Controller,
         state: &mut EntityState,
         _world: &crate::grid::Grid,
         entities: &Vec<Entity>,
@@ -232,8 +233,17 @@ impl Component for SnakeBodyComponent {
                 && state.position.within_one_of(&ent.state.position)
             {
                 if self.cool_down > 100 {
-                    self.cool_down = 0;
-                    return vec![new_snake_entity(ent.state.position.clone())];
+
+                    let mut no_snake_at_pos = true;
+                    for ent2 in entities.iter(){
+                        if ent2.state.position==ent.state.position && ent2.state.team!=ent.state.team{
+                            no_snake_at_pos=false;
+                        }
+                    }
+                    if no_snake_at_pos{
+                        self.cool_down = 0;
+                        return vec![new_snake_entity(ent.state.position.clone())];
+                    }
                 }
             }
         }
@@ -248,6 +258,41 @@ impl SnakeBodyComponent {
         Box::new(SnakeBodyComponent { cool_down: 0 })
     }
 }
+#[derive(Debug, Clone)]
+pub struct SpawnFoodComponent{
+    cool_down: u32,
+}
+
+impl Component for SpawnFoodComponent{
+    fn process(
+        &mut self,
+        user_input: &Controller,
+        state: &mut EntityState,
+        _world: &crate::grid::Grid,
+        entities: &Vec<Entity>,
+    ) -> Vec<Entity> {
+        if self.cool_down < 10000 {
+            self.cool_down += 1;
+        }
+        for input in user_input.get_buttons().iter(){
+            if input==&" ".to_string() && self.cool_down>100{
+                self.cool_down=0;
+                return vec![new_food(state.position.clone())];
+            }
+        }
+        vec![]
+    }
+    fn box_clone(&self) -> Box<dyn Component> {
+        Box::new((*self).clone())
+    }
+}
+impl SpawnFoodComponent{
+    pub fn new()->Box<dyn Component>{
+        Box::new(SpawnFoodComponent{
+            cool_down:0,
+        })
+    }
+}
 pub fn new_snake_entity(position: Vector2) -> Entity {
     Entity::new(
         position,
@@ -256,6 +301,19 @@ pub fn new_snake_entity(position: Vector2) -> Entity {
         0x007b12,
         EntityTeam::Snake,
         vec![SnakeBodyComponent::new(), GridComponent::new()],
+    )
+}
+pub fn new_food(position: Vector2) -> Entity {
+    Entity::new(
+        position,
+        10,
+        10,
+        0xffef00,
+        EntityTeam::Food,
+        vec![
+            GravityComponent::new(),
+            GridComponent::new(),
+        ],
     )
 }
 #[cfg(test)]
@@ -311,7 +369,7 @@ mod test {
             ],
         );
         e.process(
-            &Vector2::new(0, 0),
+            &Controller::new(Vector2::new(0, 0),&vec![]),
             &crate::grid::Grid::new(0, 0, vec![]),
             &vec![],
         );

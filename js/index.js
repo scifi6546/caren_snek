@@ -41,25 +41,28 @@ function game_loop(rust_module,state){
     }
     let x = 0;
     let y =0;
+    let buttons=[];
     for(let i in js_state.key_down_queue){
         if(js_state.key_down_queue[i]=="w"){
-            y+=move_speed;
-        }
-        if(js_state.key_down_queue[i]=="s"){
             y-=move_speed;
-        }
-        if(js_state.key_down_queue[i]=="d"){
+        }else if(js_state.key_down_queue[i]=="s"){
+            y+=move_speed;
+        }else if(js_state.key_down_queue[i]=="d"){
             x+=move_speed;
-        }
-        if(js_state.key_down_queue[i]=="a"){
+        }else if(js_state.key_down_queue[i]=="a"){
             x-=move_speed;
+        }else{
+            buttons.push(js_state.key_down_queue[i])
         }
     }
     let v = {"x":x,"y":y};
     if(v.x!==0 && v.y !== 0){
         console.log(v)
     }
-    let draw_calls = state.game_loop_js(v);
+    if(buttons.length>0){
+        console.log(buttons)
+    }
+    let draw_calls = state.game_loop_js({"main_axis":v,"buttons":buttons});
     if(draw_calls.length%5!=0){
         alert("Invalid Length")
     }
