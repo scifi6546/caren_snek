@@ -2,15 +2,15 @@ use crate::vector::*;
 static TILE_SIZE: u32 = 20;
 #[derive(Serialize, Deserialize, Clone, std::cmp::PartialEq, Debug)]
 pub enum Tile {
-    Wall,
-    Floor,
+    Glass,
+    Background,
 }
 
 impl Tile {
     pub fn get_color(&self) -> u32 {
         match self {
-            Self::Floor => 0x191919,
-            Self::Wall => 0x033499,
+            Self::Glass => 0xc4fffa,
+            Self::Background => 0x000000,
         }
     }
 }
@@ -38,10 +38,10 @@ impl Grid {
     }
     pub fn draw(&self) -> Vec<u32> {
         let mut out: Vec<u32> = vec![];
-        for x in 0..self.width {
-            for y in 0..self.height {
+        for y in 0..self.height {
+            for x in 0..self.width {
                 out.append(&mut vec![
-                    self.tiles[(x * self.width + y) as usize].get_color(),
+                    self.tiles[(y * self.width + x) as usize].get_color(),
                     x * TILE_SIZE,
                     y * TILE_SIZE,
                     TILE_SIZE,

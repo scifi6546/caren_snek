@@ -64,34 +64,35 @@ fn new_enemy(position: Vector2) -> Entity {
         vec![entity::InputComponent::new(),entity::GridComponent::new(),entity::EnemyDamageComponent::new()]
     )
 }
+fn new_food(position:Vector2)->Entity{
+    Entity::new(position, 10, 10, 0xffef00, EntityTeam::Player, vec![entity::GravityComponent::new(),entity::GridComponent::new()])
+}
 fn new_prize(position: Vector2) -> Entity {
    Entity::new(position, 10, 10, 0xffec00, EntityTeam::Player,
         vec![entity::GridComponent::new()])
 }
 
 pub fn init_state() -> State {
+    let mut map = vec![];
+    for y in 0..32{
+        for x in 0..32{
+            if x<2 || x>29 || y>29{
+                map.push(Tile::Glass);
+            }else{
+                map.push(Tile::Background);
+            }
+        }
+    }
     State {
         entities: vec![
             new_player(Vector2::new(1, 1)),
-            new_enemy(Vector2::new(2, 3)),
+            new_food(Vector2::new(2, 3)),
             new_prize(Vector2::new(7,7)),
         ],
         grid: Grid::new(
-            10,
-            10,
-            vec![
-                Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,
-                Tile::Wall ,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Wall ,
-                Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Wall ,
-                Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Floor,Tile::Wall ,
-                Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Wall ,
-                Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,
-                Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Wall ,
-                Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Wall ,
-                Tile::Wall ,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Wall ,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Floor,Tile::Wall ,
-                Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,Tile::Wall ,
-
-            ],
+            32,
+            32,
+                map,
         ),
     }
 }
@@ -110,10 +111,10 @@ mod tests {
     }
     #[test]
     fn one_by_one_grid() {
-        let g = Grid::new(1, 1, vec![Tile::Wall]);
+        let g = Grid::new(1, 1, vec![Tile::Glass]);
         assert_eq!(
             g.draw(),
-            vec![Tile::Wall.get_color(), 0, 0, TILE_SIZE, TILE_SIZE]
+            vec![Tile::Glass.get_color(), 0, 0, TILE_SIZE, TILE_SIZE]
         )
     }
     #[test]

@@ -102,7 +102,7 @@ impl Component for GridComponent {
     fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,_entities:&Vec<Entity>){
         if let Some(tile) = world.get_tile(state.position.clone() + state.delta_position.clone())
         {
-            if tile != crate::grid::Tile::Wall {
+            if tile != crate::grid::Tile::Glass {
                 state.position += state.delta_position.clone();
             }
             state.delta_position = Vector2::new(0, 0);
@@ -138,9 +138,32 @@ impl Component for EnemyDamageComponent {
         Box::new((*self).clone())
     }
 }
+
 impl EnemyDamageComponent{
     pub fn new()->Box<dyn Component>{
         Box::new(EnemyDamageComponent{})
+    }
+}
+#[derive(Debug,Clone)]
+pub struct GravityComponent{
+    ticker:u32,
+    fall_time:u32,//number of frames before Gravity component falls one unit
+}
+impl Component for GravityComponent{
+    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,entities:&Vec<Entity>){
+        self.ticker+=1;
+        if self.ticker>self.fall_time{
+            state.delta_position.y+=1;
+            self.ticker=0;
+        }
+    }
+    fn box_clone(&self)->Box<dyn Component>{
+        Box::new((*self).clone())
+    }
+}
+impl GravityComponent{
+    pub fn new()->Box<dyn Component>{
+        Box::new(GravityComponent{ticker:0,fall_time:30})
     }
 }
 #[cfg(test)]
