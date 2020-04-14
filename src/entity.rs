@@ -50,7 +50,7 @@ impl Entity {
         let red = (((0xff - current_red) as f64) * health) as u32 & 0x0000ff;
         let current_green = (self.state.base_color & 0x00ff00) >> 8;
         let green = (((0xff - current_green) as f64) * health) as u32;
-        let current_blue = (self.state.base_color & 0x0000ff);
+        let current_blue = self.state.base_color & 0x0000ff;
         let blue = (((0xff - current_blue) as f64) * health) as u32;
         vec![
             (red << 16) + (green << 8) + blue + self.state.base_color,
@@ -73,7 +73,7 @@ pub trait Component:std::fmt::Debug{
     fn process(&mut self,user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,entities:&Vec<Entity>);
     fn box_clone(&self)->Box<dyn Component>;
 }
-impl Clone for Box<Component>{
+impl Clone for Box<dyn Component>{
     fn clone(&self) -> Self {
         self.box_clone()
     }
@@ -88,7 +88,7 @@ impl InputComponent{
     }
 }
 impl Component for InputComponent{
-    fn process(&mut self,user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,entities:&Vec<Entity>){
+    fn process(&mut self,user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,_entities:&Vec<Entity>){
         state.delta_position=user_input.clone();
     }
     fn box_clone(&self)->Box<dyn Component>{
@@ -146,7 +146,7 @@ impl EnemyDamageComponent{
 #[cfg(test)]
 mod test{
     use super::*;
-    use crate::vector::*;
+    
     #[test]
     fn player_draw() {
         let mut p = Entity::new(Vector2::new(0, 0), 10, 10, 0x00ff00, EntityTeam::Player,
@@ -170,12 +170,12 @@ mod test{
     #[test]
     fn component_clone(){
         let c:Box<dyn Component> = InputComponent::new();
-        let c2= c.clone();
+        let _c2= c.clone();
     }
     #[test]
     fn entity_clone(){
         let e = Entity::new(Vector2::new(0, 0), 10, 10, 0x00ff00, EntityTeam::Player,
             vec![InputComponent::new()]);
-        let e2 = e.clone();
+        let _e2 = e.clone();
     }
 }
