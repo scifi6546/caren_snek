@@ -5,6 +5,8 @@ static TILE_SIZE: u32 = 20;
 pub enum EntityTeam {
     Player,
     Enemy,
+    Food,
+    Snake,
 }
 #[derive(Debug,Clone)]
 pub struct Entity {
@@ -60,17 +62,19 @@ impl Entity {
             TILE_SIZE,
         ]
     }
-    pub fn process(&mut self,input:&Vector2,grid:&crate::grid::Grid,entities:&Vec<Entity>){
+    pub fn process(&mut self,input:&Vector2,grid:&crate::grid::Grid,entities:&Vec<Entity>)->Vec<Entity>{
+        let mut entity_vec = vec![];
         for component in self.components.iter_mut(){
-            component.process(input,&mut self.state,grid,entities);
+            entity_vec.append(&mut component.process(input,&mut self.state,grid,entities));
         }
+        return entity_vec;
     }
     pub fn get_position(&self)->Vector2{
         self.state.position.clone()
     }
 }
 pub trait Component:std::fmt::Debug{
-    fn process(&mut self,user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,entities:&Vec<Entity>);
+    fn process(&mut self,user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,entities:&Vec<Entity>)->Vec<Entity>;
     fn box_clone(&self)->Box<dyn Component>;
 }
 impl Clone for Box<dyn Component>{
@@ -88,8 +92,9 @@ impl InputComponent{
     }
 }
 impl Component for InputComponent{
-    fn process(&mut self,user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,_entities:&Vec<Entity>){
+    fn process(&mut self,user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,_entities:&Vec<Entity>)->Vec<Entity>{
         state.delta_position=user_input.clone();
+        vec![]
     }
     fn box_clone(&self)->Box<dyn Component>{
         Box::new((*self).clone())
@@ -99,15 +104,18 @@ impl Component for InputComponent{
 #[derive(Debug,Clone)]
 pub struct GridComponent {}
 impl Component for GridComponent {
-    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,_entities:&Vec<Entity>){
+    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,_entities:&Vec<Entity>)->Vec<Entity>{
         if let Some(tile) = world.get_tile(state.position.clone() + state.delta_position.clone())
         {
             if tile != crate::grid::Tile::Glass {
                 state.position += state.delta_position.clone();
             }
             state.delta_position = Vector2::new(0, 0);
+            vec![]
+        }else{
+            state.delta_position = Vector2::new(0, 0);
+            vec![]
         }
-        state.delta_position = Vector2::new(0, 0);
     }
     fn box_clone(&self)->Box<dyn Component>{
         Box::new((*self).clone())
@@ -121,7 +129,7 @@ impl GridComponent{
 #[derive(Debug,Clone)]
 pub struct EnemyDamageComponent {}
 impl Component for EnemyDamageComponent {
-    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,entities:&Vec<Entity>){
+    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,entities:&Vec<Entity>)->Vec<Entity>{
         if state.health==0{
             state.delta_position=Vector2::new(0, 0);
             state.dead=true;
@@ -133,6 +141,7 @@ impl Component for EnemyDamageComponent {
                 state.delta_position=Vector2::new(0, 0);
             }
         }
+        vec![]
     }
     fn box_clone(&self)->Box<dyn Component>{
         Box::new((*self).clone())
@@ -150,21 +159,55 @@ pub struct GravityComponent{
     fall_time:u32,//number of frames before Gravity component falls one unit
 }
 impl Component for GravityComponent{
-    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,entities:&Vec<Entity>){
+    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,entities:&Vec<Entity>)->Vec<Entity>{
         self.ticker+=1;
         if self.ticker>self.fall_time{
             state.delta_position.y+=1;
             self.ticker=0;
         }
+        vec![]
     }
     fn box_clone(&self)->Box<dyn Component>{
         Box::new((*self).clone())
     }
 }
+
 impl GravityComponent{
     pub fn new()->Box<dyn Component>{
         Box::new(GravityComponent{ticker:0,fall_time:30})
     }
+}
+#[derive(Debug,Clone)]
+pub struct SnakeBodyComponent{
+    cool_down:u32,
+}
+impl Component for SnakeBodyComponent{
+    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,entities:&Vec<Entity>)->Vec<Entity>{
+        if self.cool_down<10000{
+            self.cool_down+=1;
+        }
+        for ent in entities.iter(){
+            if ent.state.team==EntityTeam::Food && state.position.within_one_of(&ent.state.position){
+                if self.cool_down>100{
+                    self.cool_down=0;
+                    return vec![new_snake_entity(ent.state.position.clone())]
+                    
+                }
+            }
+        }
+        vec![]
+    }
+    fn box_clone(&self)->Box<dyn Component>{
+        Box::new((*self).clone())
+    }
+}
+impl SnakeBodyComponent{
+    pub fn new()->Box<dyn Component>{
+        Box::new(SnakeBodyComponent{cool_down:0})
+    }
+}
+pub fn new_snake_entity(position:Vector2)->Entity{
+    Entity::new(position, 1, 1, 0x007b12, EntityTeam::Snake, vec![SnakeBodyComponent::new(),GridComponent::new()])
 }
 #[cfg(test)]
 mod test{
@@ -188,7 +231,7 @@ mod test{
     fn player_empty_process(){
         let mut e = Entity::new(Vector2::new(0, 0), 10, 10, 0x00ff00, EntityTeam::Player,
             vec![InputComponent::new(),GridComponent::new(),EnemyDamageComponent::new()]);
-        e.process(&Vector2::new(0, 0), &crate::grid::Grid::new(0, 0, vec![]), &vec![])
+        e.process(&Vector2::new(0, 0), &crate::grid::Grid::new(0, 0, vec![]), &vec![]);
     }
     #[test]
     fn component_clone(){

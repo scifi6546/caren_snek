@@ -13,7 +13,13 @@ impl Vector2 {
     pub fn new(x: i32, y: i32) -> Vector2 {
         Vector2 { x: x, y: y }
     }
-
+    pub fn within_one_of(&self,other:&Vector2)->bool{
+        if i32::abs(self.x-other.x)<=1 && i32::abs(self.y-other.y)<=1{
+            true
+        }else{
+            false
+        }
+    }
 }
 impl std::ops::Add for Vector2 {
     type Output = Self;
@@ -32,7 +38,7 @@ impl std::ops::AddAssign for Vector2 {
         };
     }
 }
-#[cfg(tests)]
+#[cfg(test)]
 mod tests{
     use super::*;
     #[test]
@@ -50,5 +56,12 @@ mod tests{
         v1 += Vector2::new(1, 1);
         assert_eq!(v1.x, 1);
         assert_eq!(v1.y, 1);
+    }
+    #[test]
+    fn within_one_of_test(){
+        let v1 = Vector2::new(0, 0);
+        assert_eq!(v1.within_one_of(&Vector2::new(0, 0)),true);
+        assert_eq!(v1.within_one_of(&Vector2::new(0, 1)),true);
+        assert_eq!(v1.within_one_of(&Vector2::new(0, 5)),false);
     }
 }

@@ -23,9 +23,11 @@ pub struct State {
 impl State {
     pub fn process(&mut self, input: Vector2) {
         let old_entities = &self.entities.clone();
+        let mut new_entities = vec![];
         for entity in self.entities.iter_mut(){
-            entity.process(&input,&self.grid,old_entities);
+            new_entities.append(&mut entity.process(&input,&self.grid,old_entities));
         }
+        self.entities.append(&mut new_entities);
     }
     pub fn draw(&self) -> Vec<u32> {
         let mut draws = self.grid.draw();
@@ -65,7 +67,7 @@ fn new_enemy(position: Vector2) -> Entity {
     )
 }
 fn new_food(position:Vector2)->Entity{
-    Entity::new(position, 10, 10, 0xffef00, EntityTeam::Player, vec![entity::GravityComponent::new(),entity::GridComponent::new()])
+    Entity::new(position, 10, 10, 0xffef00, EntityTeam::Food, vec![entity::GravityComponent::new(),entity::GridComponent::new()])
 }
 fn new_prize(position: Vector2) -> Entity {
    Entity::new(position, 10, 10, 0xffec00, EntityTeam::Player,
@@ -87,6 +89,7 @@ pub fn init_state() -> State {
         entities: vec![
             new_player(Vector2::new(1, 1)),
             new_food(Vector2::new(2, 3)),
+            new_snake_entity(Vector2::new(2, 5)),
             new_prize(Vector2::new(7,7)),
         ],
         grid: Grid::new(
