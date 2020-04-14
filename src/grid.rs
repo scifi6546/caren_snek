@@ -1,3 +1,4 @@
+use crate::vector::*;
 static TILE_SIZE: u32 = 20;
 #[derive(Serialize, Deserialize, Clone, std::cmp::PartialEq, Debug)]
 pub enum Tile {
@@ -6,7 +7,7 @@ pub enum Tile {
 }
 
 impl Tile {
-    fn get_color(&self) -> u32 {
+    pub fn get_color(&self) -> u32 {
         match self {
             Self::Floor => 0x191919,
             Self::Wall => 0x033499,

@@ -6,20 +6,20 @@ pub enum EntityTeam {
     Player,
     Enemy,
 }
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct Entity {
     state:EntityState,
     components:Vec<Box<dyn Component>>,
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-struct EntityState{
+pub struct EntityState{
     pub position: Vector2,
     pub delta_position: Vector2,
-    pub component_checklist: EntityComponentChecklist,
     pub health: u32,
     pub max_health: u32,
     pub base_color: u32,
     pub team: EntityTeam,
+    dead:bool,
 }
 impl Entity {
     pub fn new(
@@ -28,18 +28,19 @@ impl Entity {
         max_health: u32,
         base_color: u32,
         team: EntityTeam,
+        components:Vec<Box<dyn Component>>,
     ) -> Entity {
         Entity {
             state:EntityState{
             position: pos,
             delta_position: Vector2::new(0, 0),
-            component_checklist: EntityComponentChecklist::new(),
             health: health,
             max_health: max_health,
             base_color: base_color,
             team: team,
+            dead:false,
             },
-            components:vec![]
+            components:components
 
         }
     }
@@ -59,64 +60,71 @@ impl Entity {
             TILE_SIZE,
         ]
     }
-    pub fn process(&mut self,input:Vector2,grid:crate::grid::Grid,entitys:&Vec<Entity>){
+    pub fn process(&mut self,input:&Vector2,grid:&crate::grid::Grid,entities:&Vec<Entity>){
         for component in self.components.iter_mut(){
-            component.process(input,&mut self.state,grid,entitys);
+            component.process(input,&mut self.state,grid,entities);
         }
     }
-}
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct EntityComponentChecklist {
-    pub input_component: bool,
-    pub damage_component: bool,
-    pub grid_component: bool,
-}
-impl EntityComponentChecklist {
-    pub fn new() -> EntityComponentChecklist {
-        EntityComponentChecklist {
-            input_component: false,
-            grid_component: false,
-            damage_component: false,
-        }
+    pub fn get_position(&self)->Vector2{
+        self.state.position.clone()
     }
 }
-
-trait Component:std::fmt::Debug{
-    fn process(&mut self,user_input:Vector2,state:&mut EntityState,world:crate::grid::Grid,entities:&Vec<Entity>);
+pub trait Component:std::fmt::Debug{
+    fn process(&mut self,user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,entities:&Vec<Entity>);
+    fn box_clone(&self)->Box<dyn Component>;
 }
-#[derive(Debug)]
-struct InputComponent{
+impl Clone for Box<Component>{
+    fn clone(&self) -> Self {
+        self.box_clone()
+    }
+}
+#[derive(Debug,Clone)]
+pub struct InputComponent{
 
+}
+impl InputComponent{
+    pub fn new()->Box<dyn Component>{
+        Box::new(InputComponent{})
+    }
 }
 impl Component for InputComponent{
-    fn process(&mut self,user_input:Vector2,state:&mut EntityState,world:crate::grid::Grid,entities:&Vec<Entity>){
-        state.delta_position=user_input;
+    fn process(&mut self,user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,entities:&Vec<Entity>){
+        state.delta_position=user_input.clone();
+    }
+    fn box_clone(&self)->Box<dyn Component>{
+        Box::new((*self).clone())
     }
 }
 
-#[derive(Debug)]
-struct GridComponent {}
+#[derive(Debug,Clone)]
+pub struct GridComponent {}
 impl Component for GridComponent {
-    fn process(&mut self,user_input:Vector2,state:&mut EntityState,world:crate::grid::Grid,entities:&Vec<Entity>){
+    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,world:&crate::grid::Grid,_entities:&Vec<Entity>){
         if let Some(tile) = world.get_tile(state.position.clone() + state.delta_position.clone())
         {
             if tile != crate::grid::Tile::Wall {
-                state.position += state.delta_position;
+                state.position += state.delta_position.clone();
             }
             state.delta_position = Vector2::new(0, 0);
         }
         state.delta_position = Vector2::new(0, 0);
     }
+    fn box_clone(&self)->Box<dyn Component>{
+        Box::new((*self).clone())
+    }
 }
-#[derive(Debug)]
-struct EnemyDamageComponent {}
+impl GridComponent{
+    pub fn new()->Box<dyn Component>{
+        Box::new(GridComponent{})
+    }
+}
+#[derive(Debug,Clone)]
+pub struct EnemyDamageComponent {}
 impl Component for EnemyDamageComponent {
-    fn process(&mut self,user_input:Vector2,state:&mut EntityState,world:crate::grid::Grid,entities:&Vec<Entity>){
+    fn process(&mut self,_user_input:&Vector2,state:&mut EntityState,_world:&crate::grid::Grid,entities:&Vec<Entity>){
         if state.health==0{
             state.delta_position=Vector2::new(0, 0);
-            state.component_checklist.damage_component=false;
-            state.component_checklist.input_component=false;
-            
+            state.dead=true;
         }
         let pos = state.position.clone()+state.delta_position.clone();
         for ent in entities.iter() {
@@ -125,5 +133,49 @@ impl Component for EnemyDamageComponent {
                 state.delta_position=Vector2::new(0, 0);
             }
         }
+    }
+    fn box_clone(&self)->Box<dyn Component>{
+        Box::new((*self).clone())
+    }
+}
+impl EnemyDamageComponent{
+    pub fn new()->Box<dyn Component>{
+        Box::new(EnemyDamageComponent{})
+    }
+}
+#[cfg(test)]
+mod test{
+    use super::*;
+    use crate::vector::*;
+    #[test]
+    fn player_draw() {
+        let mut p = Entity::new(Vector2::new(0, 0), 10, 10, 0x00ff00, EntityTeam::Player,
+            vec![InputComponent::new(),GridComponent::new(),EnemyDamageComponent::new()]);
+        assert_eq!(p.draw(), vec![0x00ff00, 0, 0 as u32, TILE_SIZE, TILE_SIZE]);
+        p.state.health = 0;
+        assert_eq!(p.draw(), vec![0xffffff, 0, 0 as u32, TILE_SIZE, TILE_SIZE]);
+    }
+    #[test]
+    fn player_process_draw(){
+        let p = Entity::new(Vector2::new(0, 0), 10, 10, 0x00ff00, EntityTeam::Player,
+        vec![InputComponent::new(),GridComponent::new(),EnemyDamageComponent::new()]);
+        p.draw();
+    }
+    #[test]
+    fn player_empty_process(){
+        let mut e = Entity::new(Vector2::new(0, 0), 10, 10, 0x00ff00, EntityTeam::Player,
+            vec![InputComponent::new(),GridComponent::new(),EnemyDamageComponent::new()]);
+        e.process(&Vector2::new(0, 0), &crate::grid::Grid::new(0, 0, vec![]), &vec![])
+    }
+    #[test]
+    fn component_clone(){
+        let c:Box<dyn Component> = InputComponent::new();
+        let c2= c.clone();
+    }
+    #[test]
+    fn entity_clone(){
+        let e = Entity::new(Vector2::new(0, 0), 10, 10, 0x00ff00, EntityTeam::Player,
+            vec![InputComponent::new()]);
+        let e2 = e.clone();
     }
 }
