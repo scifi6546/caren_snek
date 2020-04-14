@@ -24,8 +24,8 @@ impl State {
     pub fn process(&mut self, input: Vector2) {
         let old_entities = &self.entities.clone();
         let mut new_entities = vec![];
-        for entity in self.entities.iter_mut(){
-            new_entities.append(&mut entity.process(&input,&self.grid,old_entities));
+        for entity in self.entities.iter_mut() {
+            new_entities.append(&mut entity.process(&input, &self.grid, old_entities));
         }
         self.entities.append(&mut new_entities);
     }
@@ -36,14 +36,16 @@ impl State {
         }
         return draws;
     }
-    pub fn game_loop_js(&mut self,input:JsValue)->JsValue{
-        serde_wasm_bindgen::to_value(&self.game_loop(serde_wasm_bindgen::from_value(input).ok().unwrap())).ok().unwrap()
-        
+    pub fn game_loop_js(&mut self, input: JsValue) -> JsValue {
+        serde_wasm_bindgen::to_value(
+            &self.game_loop(serde_wasm_bindgen::from_value(input).ok().unwrap()),
+        )
+        .ok()
+        .unwrap()
     }
-    pub fn game_loop(&mut self,input:Vector2)->Vec<u32>{
+    pub fn game_loop(&mut self, input: Vector2) -> Vec<u32> {
         self.process(input);
         self.draw()
-        
     }
     #[allow(dead_code)]
     fn get_entities(&self) -> &Vec<Entity> {
@@ -57,30 +59,64 @@ pub struct MainOutput {
 }
 
 fn new_player(position: Vector2) -> Entity {
-
-    Entity::new(position, 10, 10, 0x00ff00, EntityTeam::Player,
-    vec![entity::InputComponent::new(),entity::GridComponent::new(),entity::EnemyDamageComponent::new()])
-}
-fn new_enemy(position: Vector2) -> Entity {
-    Entity::new(position, 10, 10, 0xff0000, EntityTeam::Enemy,
-        vec![entity::InputComponent::new(),entity::GridComponent::new(),entity::EnemyDamageComponent::new()]
+    Entity::new(
+        position,
+        10,
+        10,
+        0x00ff00,
+        EntityTeam::Player,
+        vec![
+            entity::InputComponent::new(),
+            entity::GridComponent::new(),
+            entity::EnemyDamageComponent::new(),
+        ],
     )
 }
-fn new_food(position:Vector2)->Entity{
-    Entity::new(position, 10, 10, 0xffef00, EntityTeam::Food, vec![entity::GravityComponent::new(),entity::GridComponent::new()])
+fn new_enemy(position: Vector2) -> Entity {
+    Entity::new(
+        position,
+        10,
+        10,
+        0xff0000,
+        EntityTeam::Enemy,
+        vec![
+            entity::InputComponent::new(),
+            entity::GridComponent::new(),
+            entity::EnemyDamageComponent::new(),
+        ],
+    )
+}
+fn new_food(position: Vector2) -> Entity {
+    Entity::new(
+        position,
+        10,
+        10,
+        0xffef00,
+        EntityTeam::Food,
+        vec![
+            entity::GravityComponent::new(),
+            entity::GridComponent::new(),
+        ],
+    )
 }
 fn new_prize(position: Vector2) -> Entity {
-   Entity::new(position, 10, 10, 0xffec00, EntityTeam::Player,
-        vec![entity::GridComponent::new()])
+    Entity::new(
+        position,
+        10,
+        10,
+        0xffec00,
+        EntityTeam::Player,
+        vec![entity::GridComponent::new()],
+    )
 }
 
 pub fn init_state() -> State {
     let mut map = vec![];
-    for y in 0..32{
-        for x in 0..32{
-            if x<2 || x>29 || y>29{
+    for y in 0..32 {
+        for x in 0..32 {
+            if x < 2 || x > 29 || y > 29 {
                 map.push(Tile::Glass);
-            }else{
+            } else {
                 map.push(Tile::Background);
             }
         }
@@ -90,13 +126,9 @@ pub fn init_state() -> State {
             new_player(Vector2::new(1, 1)),
             new_food(Vector2::new(2, 3)),
             new_snake_entity(Vector2::new(2, 5)),
-            new_prize(Vector2::new(7,7)),
+            new_prize(Vector2::new(7, 7)),
         ],
-        grid: Grid::new(
-            32,
-            32,
-                map,
-        ),
+        grid: Grid::new(32, 32, map),
     }
 }
 #[wasm_bindgen]
@@ -121,11 +153,11 @@ mod tests {
         )
     }
     #[test]
-    fn test_init_state(){
+    fn test_init_state() {
         init_state();
     }
     #[test]
-    fn draw_state(){
+    fn draw_state() {
         let s = init_state();
         s.draw();
     }
