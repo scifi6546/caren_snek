@@ -7,6 +7,8 @@ use wasm_bindgen::prelude::*;
 extern crate wee_alloc;
 mod vector;
 use vector::*;
+mod entity;
+use entity::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 static TILE_SIZE: u32 = 20;
@@ -62,6 +64,7 @@ impl Grid {
         return out;
     }
 }
+#[wasm_bindgen]
 #[derive(Serialize, Deserialize)]
 pub struct State {
     entities: Vec<Entity>,
@@ -70,6 +73,7 @@ pub struct State {
     grid_component: GridComponent,
     damage_component: EnemyDamageComponent,
 }
+#[wasm_bindgen]
 impl State {
     pub fn process(&mut self, input: Vector2) {
         let mut entities_v = vec![];
@@ -144,81 +148,22 @@ impl State {
         }
         return draws;
     }
+    pub fn game_loop_js(&mut self,input:JsValue)->JsValue{
+        self.process(serde_wasm_bindgen::from_value(input).ok().unwrap());
+        serde_wasm_bindgen::to_value(&self.draw()).ok().unwrap()
+        
+    }
     #[allow(dead_code)]
     fn get_entities(&self) -> &Vec<Entity> {
         &self.entities
     }
 }
-#[derive(Serialize)]
+
 pub struct MainOutput {
     pub state: State,
     pub draw_calls: Vec<u32>,
 }
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-enum EntityTeam {
-    Player,
-    Enemy,
-}
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-struct Entity {
-    position: Vector2,
-    delta_position: Vector2,
-    component_checklist: EntityComponentChecklist,
-    health: u32,
-    max_health: u32,
-    base_color: u32,
-    team: EntityTeam,
-}
-impl Entity {
-    pub fn new(
-        pos: Vector2,
-        health: u32,
-        max_health: u32,
-        base_color: u32,
-        team: EntityTeam,
-    ) -> Entity {
-        Entity {
-            position: pos,
-            delta_position: Vector2::new(0, 0),
-            component_checklist: EntityComponentChecklist::new(),
-            health: health,
-            max_health: max_health,
-            base_color: base_color,
-            team: team,
-        }
-    }
-    pub fn draw(&self) -> Vec<u32> {
-        let health = (self.max_health as f64 - self.health as f64) / (self.max_health as f64);
-        let current_red = (self.base_color >> 16) & 0x0000ff;
-        let red = (((0xff - current_red) as f64) * health) as u32 & 0x0000ff;
-        let current_green = (self.base_color & 0x00ff00) >> 8;
-        let green = (((0xff - current_green) as f64) * health) as u32;
-        let current_blue = (self.base_color & 0x0000ff);
-        let blue = (((0xff - current_blue) as f64) * health) as u32;
-        vec![
-            (red << 16) + (green << 8) + blue + self.base_color,
-            (self.position.x as u32 * TILE_SIZE) as u32,
-            (self.position.y as u32 * TILE_SIZE) as u32,
-            TILE_SIZE,
-            TILE_SIZE,
-        ]
-    }
-}
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-struct EntityComponentChecklist {
-    input_component: bool,
-    damage_component: bool,
-    grid_component: bool,
-}
-impl EntityComponentChecklist {
-    pub fn new() -> EntityComponentChecklist {
-        EntityComponentChecklist {
-            input_component: false,
-            grid_component: false,
-            damage_component: false,
-        }
-    }
-}
+
 fn new_player(position: Vector2) -> Entity {
     let mut e = Entity::new(position, 10, 10, 0x00ff00, EntityTeam::Player);
     e.component_checklist.input_component = true;
@@ -317,17 +262,6 @@ impl Component for EnemyDamageComponent {
         (ent_m, world)
     }
 }
-#[wasm_bindgen]
-pub fn game_loop_js(input: JsValue, state_in: JsValue) -> JsValue {
-    let mut input:Vector2=serde_wasm_bindgen::from_value(input).ok().unwrap();
-    input.y=input.y*-1;
-    return serde_wasm_bindgen::to_value(&game_loop(
-        input,
-        serde_wasm_bindgen::from_value(state_in).ok().unwrap(),
-    ))
-    .ok()
-    .unwrap();
-}
 
 pub fn game_loop(input: Vector2, state: State) -> MainOutput {
     let mut state_m = state;
@@ -369,8 +303,8 @@ pub fn init_state() -> State {
     }
 }
 #[wasm_bindgen]
-pub fn init_state_js() -> JsValue {
-    serde_wasm_bindgen::to_value(&init_state()).ok().unwrap()
+pub fn init_state_js() -> State {
+    init_state()
 }
 #[cfg(test)]
 mod tests {

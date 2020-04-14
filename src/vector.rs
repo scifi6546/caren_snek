@@ -1,3 +1,9 @@
+extern crate wasm_bindgen;
+#[allow(unused_imports)]
+use serde_wasm_bindgen::*;
+#[macro_use]
+use wasm_bindgen::prelude::*;
+#[wasm_bindgen]
 #[derive(Serialize, Deserialize, Clone, std::cmp::PartialEq, Debug)]
 pub struct Vector2 {
     pub x: i32,

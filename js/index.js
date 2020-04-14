@@ -59,8 +59,7 @@ function game_loop(rust_module,state){
     if(v.x!==0 && v.y !== 0){
         console.log(v)
     }
-    let data = rust_module.game_loop_js(v,state);
-    let draw_calls = data.draw_calls;
+    let draw_calls = state.game_loop_js(v);
     if(draw_calls.length%5!=0){
         alert("Invalid Length")
     }
@@ -69,7 +68,7 @@ function game_loop(rust_module,state){
     }
     //draw(0xff0000,x,y,10,10);
     js_state.key_down_queue=[]
-    return data.state;
+    return state;
     
 }
 async function main(){
