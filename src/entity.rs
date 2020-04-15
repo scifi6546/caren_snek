@@ -22,7 +22,7 @@ pub struct EntityState {
     pub max_health: u32,
     pub base_color: u32,
     pub team: EntityTeam,
-    dead: bool,
+    pub dead: bool,
 }
 impl Entity {
     pub fn new(
@@ -77,6 +77,9 @@ impl Entity {
     }
     pub fn get_position(&self) -> Vector2 {
         self.state.position.clone()
+    }
+    pub fn get_dead(&self)->bool{
+        self.state.dead
     }
 }
 pub trait Component: std::fmt::Debug {
@@ -293,6 +296,37 @@ impl SpawnFoodComponent{
         })
     }
 }
+#[derive(Debug, Clone)]
+struct LifetimeComponent{
+    current_lived:u64,
+    lifespan:u64,
+}
+impl Component for LifetimeComponent{
+    fn process(
+        &mut self,
+        user_input: &Controller,
+        state: &mut EntityState,
+        _world: &crate::grid::Grid,
+        entities: &Vec<Entity>,
+    ) -> Vec<Entity> {
+        self.current_lived+=1;
+        if self.current_lived>self.lifespan{
+            state.dead=true;
+        }
+        vec![]
+    }
+    fn box_clone(&self) -> Box<dyn Component> {
+        Box::new((*self).clone())
+    }
+}
+impl LifetimeComponent{
+    pub fn new(lifespan:u64)->Box<dyn Component>{
+        Box::new(LifetimeComponent{
+            current_lived:0,
+            lifespan:lifespan,
+        })
+    }
+}
 pub fn new_snake_entity(position: Vector2) -> Entity {
     Entity::new(
         position,
@@ -313,6 +347,7 @@ pub fn new_food(position: Vector2) -> Entity {
         vec![
             GravityComponent::new(),
             GridComponent::new(),
+            LifetimeComponent::new(850),
         ],
     )
 }

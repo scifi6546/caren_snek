@@ -30,6 +30,7 @@ impl State {
             new_entities.append(&mut entity.process(&input, &self.grid, old_entities));
         }
         self.entities.append(&mut new_entities);
+        self.kill_dead();
     }
     pub fn draw(&self) -> Vec<u32> {
         let mut draws = self.grid.draw();
@@ -38,7 +39,15 @@ impl State {
         }
         return draws;
     }
-    
+    pub fn kill_dead(&mut self){
+        let mut new_entities = vec![];
+        for entity in self.entities.iter(){
+            if entity.get_dead()==false{
+                new_entities.push(entity.clone());
+            }
+        }
+        self.entities = new_entities;
+    }
     pub fn game_loop_js(&mut self, input: JsValue) -> JsValue {
         serde_wasm_bindgen::to_value(
             &self.game_loop(serde_wasm_bindgen::from_value(input).ok().unwrap()),
