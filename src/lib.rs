@@ -13,6 +13,7 @@ mod controller;
 use controller::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+#[allow(dead_code)]
 static TILE_SIZE: u32 = 20;
 mod grid;
 use grid::*;
@@ -84,6 +85,7 @@ fn new_cursor(position: Vector2) -> Entity {
         ],
     )
 }
+#[allow(dead_code)]
 fn new_enemy(position: Vector2) -> Entity {
     Entity::new(
         position,
@@ -98,7 +100,7 @@ fn new_enemy(position: Vector2) -> Entity {
         ],
     )
 }
-
+#[allow(dead_code)]
 fn new_prize(position: Vector2) -> Entity {
     Entity::new(
         position,

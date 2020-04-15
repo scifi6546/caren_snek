@@ -194,7 +194,7 @@ impl Component for GravityComponent {
         _user_input: &Controller,
         state: &mut EntityState,
         _world: &crate::grid::Grid,
-        entities: &Vec<Entity>,
+        _entities: &Vec<Entity>,
     ) -> Vec<Entity> {
         self.ticker += 1;
         if self.ticker > self.fall_time {
@@ -272,7 +272,7 @@ impl Component for SpawnFoodComponent{
         user_input: &Controller,
         state: &mut EntityState,
         _world: &crate::grid::Grid,
-        entities: &Vec<Entity>,
+        _entities: &Vec<Entity>,
     ) -> Vec<Entity> {
         if self.cool_down < 10000 {
             self.cool_down += 1;
@@ -304,10 +304,10 @@ struct LifetimeComponent{
 impl Component for LifetimeComponent{
     fn process(
         &mut self,
-        user_input: &Controller,
+        _user_input: &Controller,
         state: &mut EntityState,
         _world: &crate::grid::Grid,
-        entities: &Vec<Entity>,
+        _entities: &Vec<Entity>,
     ) -> Vec<Entity> {
         self.current_lived+=1;
         if self.current_lived>self.lifespan{
